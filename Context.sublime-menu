@@ -1,0 +1,17 @@
+[
+	{
+		"caption": "-"
+	},
+	{
+		"caption": "SE: Open Metadata File",
+		"command": "se_open_metadata_file"
+	},
+	{
+		"caption": "SE: Search Page Scans for Selection",
+		"command": "se_search_source"
+	},
+	{
+		"caption": "-"
+	}
+]
+

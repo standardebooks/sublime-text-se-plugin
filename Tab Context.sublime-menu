@@ -1,0 +1,13 @@
+[
+	{
+		"caption": "-"
+	},
+	{
+		"caption": "SE: Open Metadata File",
+		"command": "se_open_metadata_file",
+		"args": { "group": -1, "index": -1 }
+	},
+	{
+		"caption": "-"
+	}
+]
