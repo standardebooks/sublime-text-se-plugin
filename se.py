@@ -38,10 +38,6 @@ def is_cursor_inside_sgml(view):
 	"""Return True if at least one cursor is within XML or HTML syntax."""
 	return next(get_sgml_regions_containing_cursors(view), None) is not None
 
-def contains_sgml(view):
-	"""Return True if the view contains XML or HTML syntax."""
-	return len(get_sgml_regions(view)) > 0
-
 def get_selection(view):
 	"""Get the currently selected text, or None"""
 
@@ -61,18 +57,46 @@ def get_group_view(window, group, index):
 	return view
 
 def is_se_file(view):
-	"""True if the file contains XHTML and the SE namespace string"""
+	"""True if the file has a filename, and we can find the container.xml file for it in its local tree"""
 
-	if contains_sgml(view) and view.find("se: https://standardebooks.org/vocab/1.0", 0):
+	if view.file_name() and get_container_path(view.file_name()):
 		return True
 
 	return False
 
-def get_metadata_file_path(filename):
-	"""Get the metadata file path for a given XHTML filename."""
+def get_container_path(filename):
+	file_dir = os.path.dirname(os.path.abspath(filename))
 
-	filepath = os.path.abspath(filename)
-	meta_inf_path = os.path.abspath(os.path.join(os.path.dirname(filepath), os.pardir, os.pardir, "META-INF", "container.xml"))
+	# Check three dirs up for the ./src/ folder
+	src_dir = os.path.abspath(os.path.join(file_dir, os.pardir, os.pardir, os.pardir, "src"))
+
+	# Check two dirs up
+	if not os.path.isdir(src_dir):
+		src_dir = os.path.abspath(os.path.join(file_dir, os.pardir, os.pardir, "src"))
+
+		# Check one dir up
+		if not os.path.isdir(src_dir):
+			src_dir = os.path.abspath(os.path.join(file_dir, os.pardir, "src"))
+
+			# Check current dir
+			if not os.path.isdir(src_dir):
+				src_dir = os.path.abspath(os.path.join(file_dir, "src"))
+
+	meta_inf_path = os.path.abspath(os.path.join(src_dir, "META-INF", "container.xml"))
+
+	if not os.path.isfile(meta_inf_path):
+		return None
+
+	return meta_inf_path
+
+def get_metadata_file_path(filename):
+	"""
+	Get the metadata file path for a given XHTML filename.
+	Check for META-INF in the current dir, then up to two dirs up, and one dir down.
+	"""
+
+	# We have ./src/, now get the container file path
+	meta_inf_path = get_container_path(filename)
 
 	with open(meta_inf_path, "r", encoding="utf8") as file:
 		meta_inf_dom = etree.fromstring(str.encode(file.read().replace(" xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\"", "")))
@@ -118,25 +142,6 @@ class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 class SeSearchSourceCommand(sublime_plugin.TextCommand):
 	"""Contains the se_search_source command"""
 	hathi_source_cache = {}
-
-	def is_enabled(self):
-		"""
-		Is this command visible in the context menu?
-		True if the view contains SGML and there is text selected
-		"""
-
-		if is_cursor_inside_sgml(self.view) and get_selection(self.view):
-			return True
-
-		return False
-
-	def is_visible(self):
-		"""
-		Is this command visible in the command palette?
-		True if the view contains SGML
-		"""
-
-		return is_se_file(self.view)
 
 	def run(self, edit):
 		"""Entry point for the se_search_source command. The `edit` param is required by ST"""
@@ -207,3 +212,22 @@ class SeSearchSourceCommand(sublime_plugin.TextCommand):
 				return
 
 		self.view.window().status_message("Couldn’t recognize source URL.")
+
+	def is_enabled(self):
+		"""
+		Is this command visible in the context menu?
+		True if the view contains SGML and there is text selected
+		"""
+
+		if is_cursor_inside_sgml(self.view) and get_selection(self.view):
+			return True
+
+		return False
+
+	def is_visible(self):
+		"""
+		Is this command visible in the command palette?
+		True if the view contains SGML
+		"""
+
+		return is_se_file(self.view)
