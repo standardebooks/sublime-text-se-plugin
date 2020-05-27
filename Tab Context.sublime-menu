@@ -8,6 +8,11 @@
 		"args": { "group": -1, "index": -1 }
 	},
 	{
+		"caption": "SE: Search in Ebook",
+		"command": "se_search_in_ebook",
+		"args": { "group": -1, "index": -1 }
+	},
+	{
 		"caption": "-"
 	}
 ]

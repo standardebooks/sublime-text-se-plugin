@@ -139,6 +139,43 @@ class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 		# We get here if we right-clicked on a tab
 		return is_se_file(get_group_view(self.window, group, index))
 
+class SeSearchInEbookCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_search_in_ebook command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_search_in_ebook command."""
+
+		filename = ""
+		if group < 0 and index < 0:
+			# We get here if we right-clicked on the window contents
+			filename = self.window.active_view().file_name()
+		else:
+			# We get here if we right-clicked on a tab
+			filename = get_group_view(self.window, group, index).file_name()
+
+		try:
+			metadata_file_path = get_metadata_file_path(os.path.abspath(filename))
+			ebook_dir_path = re.sub(r"{}?(epub|src){}?".format(os.sep, os.sep), "", os.path.dirname(metadata_file_path))
+			self.window.run_command('hide_panel')
+			self.window.run_command("show_panel", {"panel": "find_in_files", "where": ebook_dir_path})
+
+		except:
+			self.window.status_message("Couldn’t locate SE ebook metadata file.")
+
+	def is_visible(self, group=-1, index=-1):
+		"""
+		Is this command visible in the right-click menu?
+		True if the view contains SGML
+		group and index are magic variables passed by ST, via the Tab Context.sublime-menu file
+		"""
+
+		if group < 0 and index < 0:
+			# We get here if we right-clicked on the window contents
+			return is_se_file(self.window.active_view())
+
+		# We get here if we right-clicked on a tab
+		return is_se_file(get_group_view(self.window, group, index))
+
 class SeSearchSourceCommand(sublime_plugin.TextCommand):
 	"""Contains the se_search_source command"""
 	hathi_source_cache = {}

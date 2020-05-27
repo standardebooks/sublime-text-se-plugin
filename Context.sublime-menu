@@ -11,6 +11,10 @@
 		"command": "se_search_source"
 	},
 	{
+		"caption": "SE: Search in Ebook",
+		"command": "se_search_in_ebook"
+	},
+	{
 		"caption": "-"
 	}
 ]
