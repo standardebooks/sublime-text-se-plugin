@@ -103,7 +103,32 @@ def get_metadata_file_path(filename):
 
 	metadata_file_path = meta_inf_dom.xpath("/container/rootfiles/rootfile/@full-path", namespaces={"container": "urn:oasis:names:tc:opendocument:xmlns:container"})[0]
 
-	return  os.path.abspath(os.path.join(os.path.dirname(meta_inf_path), os.pardir, metadata_file_path))
+	return os.path.abspath(os.path.join(os.path.dirname(meta_inf_path), os.pardir, metadata_file_path))
+
+def get_current_filename(self, group, index):
+	filename = ""
+	if group < 0 and index < 0:
+		# We get here if we right-clicked on the window contents
+		filename = self.window.active_view().file_name()
+	else:
+		# We get here if we right-clicked on a tab
+		filename = get_group_view(self.window, group, index).file_name()
+
+	return filename
+
+def is_se_command_visible(self, group, index):
+	"""
+	Is this command visible in the right-click menu?
+	True if the view contains SGML
+	group and index are magic variables passed by ST, via the Tab Context.sublime-menu file
+	"""
+
+	if group < 0 and index < 0:
+		# We get here if we right-clicked on the window contents
+		return is_se_file(self.window.active_view())
+
+	# We get here if we right-clicked on a tab
+	return is_se_file(get_group_view(self.window, group, index))
 
 class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 	"""Contains the se_open_metadata_file command"""
@@ -111,13 +136,7 @@ class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 	def run(self, group=-1, index=-1):
 		"""Entry point for the se_open_metadata_file command."""
 
-		filename = ""
-		if group < 0 and index < 0:
-			# We get here if we right-clicked on the window contents
-			filename = self.window.active_view().file_name()
-		else:
-			# We get here if we right-clicked on a tab
-			filename = get_group_view(self.window, group, index).file_name()
+		filename = get_current_filename(self, group, index)
 
 		try:
 			metadata_file_path = get_metadata_file_path(os.path.abspath(filename))
@@ -126,18 +145,99 @@ class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 			self.window.status_message("Couldn’t locate SE ebook metadata file.")
 
 	def is_visible(self, group=-1, index=-1):
-		"""
-		Is this command visible in the right-click menu?
-		True if the view contains SGML
-		group and index are magic variables passed by ST, via the Tab Context.sublime-menu file
-		"""
+		return is_se_command_visible(self, group, index)
 
-		if group < 0 and index < 0:
-			# We get here if we right-clicked on the window contents
-			return is_se_file(self.window.active_view())
+class SeOpenStandardFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_standard_file command"""
 
-		# We get here if we right-clicked on a tab
-		return is_se_file(get_group_view(self.window, group, index))
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
+
+
+class SeOpenCssFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_css_file command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_open_metadata_file command."""
+
+		filename = get_current_filename(self, group, index)
+
+		try:
+			file_path = os.path.join(os.path.dirname(get_metadata_file_path(os.path.abspath(filename))), "css", "local.css")
+			self.window.open_file(file_path)
+		except:
+			self.window.status_message("Couldn’t locate SE ebook CSS file.")
+
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
+
+class SeOpenColophonFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_colophon_file command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_open_metadata_file command."""
+
+		filename = get_current_filename(self, group, index)
+
+		try:
+			file_path = os.path.join(os.path.dirname(get_metadata_file_path(os.path.abspath(filename))), "text", "colophon.xhtml")
+			self.window.open_file(file_path)
+		except:
+			self.window.status_message("Couldn’t locate SE ebook colophon file.")
+
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
+
+class SeOpenImprintFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_imprint_file command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_open_metadata_file command."""
+
+		filename = get_current_filename(self, group, index)
+
+		try:
+			file_path = os.path.join(os.path.dirname(get_metadata_file_path(os.path.abspath(filename))), "text", "imprint.xhtml")
+			self.window.open_file(file_path)
+		except:
+			self.window.status_message("Couldn’t locate SE ebook imprint file.")
+
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
+
+class SeOpenTitlepageFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_titlepage_file command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_open_metadata_file command."""
+
+		filename = get_current_filename(self, group, index)
+
+		try:
+			file_path = os.path.join(os.path.dirname(get_metadata_file_path(os.path.abspath(filename))), "text", "titlepage.xhtml")
+			self.window.open_file(file_path)
+		except:
+			self.window.status_message("Couldn’t locate SE ebook titlepage file.")
+
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
+
+class SeOpenTocFileCommand(sublime_plugin.WindowCommand):
+	"""Contains the se_open_titlepage_file command"""
+
+	def run(self, group=-1, index=-1):
+		"""Entry point for the se_open_metadata_file command."""
+
+		filename = get_current_filename(self, group, index)
+
+		try:
+			file_path = os.path.join(os.path.dirname(get_metadata_file_path(os.path.abspath(filename))), "toc.xhtml")
+			self.window.open_file(file_path)
+		except:
+			self.window.status_message("Couldn’t locate SE ebook ToC file.")
+
+	def is_visible(self, group=-1, index=-1):
+		return is_se_command_visible(self, group, index)
 
 class SeSearchInEbookCommand(sublime_plugin.WindowCommand):
 	"""Contains the se_search_in_ebook command"""
@@ -145,13 +245,7 @@ class SeSearchInEbookCommand(sublime_plugin.WindowCommand):
 	def run(self, group=-1, index=-1):
 		"""Entry point for the se_search_in_ebook command."""
 
-		filename = ""
-		if group < 0 and index < 0:
-			# We get here if we right-clicked on the window contents
-			filename = self.window.active_view().file_name()
-		else:
-			# We get here if we right-clicked on a tab
-			filename = get_group_view(self.window, group, index).file_name()
+		filename = get_current_filename(self, group, index)
 
 		try:
 			metadata_file_path = get_metadata_file_path(os.path.abspath(filename))
@@ -163,18 +257,7 @@ class SeSearchInEbookCommand(sublime_plugin.WindowCommand):
 			self.window.status_message("Couldn’t locate SE ebook metadata file.")
 
 	def is_visible(self, group=-1, index=-1):
-		"""
-		Is this command visible in the right-click menu?
-		True if the view contains SGML
-		group and index are magic variables passed by ST, via the Tab Context.sublime-menu file
-		"""
-
-		if group < 0 and index < 0:
-			# We get here if we right-clicked on the window contents
-			return is_se_file(self.window.active_view())
-
-		# We get here if we right-clicked on a tab
-		return is_se_file(get_group_view(self.window, group, index))
+		return is_se_command_visible(self, group, index)
 
 class SeSearchSourceCommand(sublime_plugin.TextCommand):
 	"""Contains the se_search_source command"""

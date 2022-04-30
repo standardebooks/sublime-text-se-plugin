@@ -6,5 +6,25 @@
 	{
 		"caption": "SE: Search Page Scans for Selection",
 		"command": "se_search_source"
+	},
+	{
+		"caption": "SE: Open Colophon File",
+		"command": "se_open_colophon_file"
+	},
+	{
+		"caption": "SE: Open CSS File",
+		"command": "se_open_css_file"
+	},
+	{
+		"caption": "SE: Open Imprint File",
+		"command": "se_open_imprint_file"
+	},
+	{
+		"caption": "SE: Open Titlepage File",
+		"command": "se_open_titlepage_file"
+	},
+	{
+		"caption": "SE: Open ToC File",
+		"command": "se_open_toc_file"
 	}
 ]

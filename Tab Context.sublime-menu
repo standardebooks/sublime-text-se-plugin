@@ -8,6 +8,38 @@
 		"args": { "group": -1, "index": -1 }
 	},
 	{
+		"caption": "SE: Open Standard File",
+		"command": "se_open_standard_file",
+		"args": { "group": -1, "index": -1 },
+		"children": [
+			{
+				"caption": "Colophon File",
+				"command": "se_open_colophon_file",
+				"args": { "group": -1, "index": -1 },
+			},
+			{
+				"caption": "CSS File",
+				"command": "se_open_css_file",
+				"args": { "group": -1, "index": -1 },
+			},
+			{
+				"caption": "Imprint File",
+				"command": "se_open_imprint_file",
+				"args": { "group": -1, "index": -1 },
+			},
+			{
+				"caption": "Titlepage File",
+				"command": "se_open_titlepage_file",
+				"args": { "group": -1, "index": -1 },
+			},
+			{
+				"caption": "ToC File",
+				"command": "se_open_toc_file",
+				"args": { "group": -1, "index": -1 },
+			}
+		]
+	},
+	{
 		"caption": "SE: Search in Ebook",
 		"command": "se_search_in_ebook",
 		"args": { "group": -1, "index": -1 }

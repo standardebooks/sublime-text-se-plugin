@@ -7,6 +7,32 @@
 		"command": "se_open_metadata_file"
 	},
 	{
+		"caption": "SE: Open Standard File",
+		"command": "se_open_standard_file",
+		"children": [
+			{
+				"caption": "Colophon File",
+				"command": "se_open_colophon_file"
+			},
+			{
+				"caption": "CSS File",
+				"command": "se_open_css_file"
+			},
+			{
+				"caption": "Imprint File",
+				"command": "se_open_imprint_file"
+			},
+			{
+				"caption": "Titlepage File",
+				"command": "se_open_titlepage_file"
+			},
+			{
+				"caption": "ToC File",
+				"command": "se_open_toc_file"
+			}
+		]
+	},
+	{
 		"caption": "SE: Search Page Scans for Selection",
 		"command": "se_search_source"
 	},
