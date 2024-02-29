@@ -321,13 +321,14 @@ class SeSearchSourceCommand(sublime_plugin.TextCommand):
 								self.hathi_source_cache[source] = re.sub(r"^https?://hdl\.handle\.net/[0-9]+/", r"", hathi_sources[0])
 							else:
 								self.hathi_source_cache[source] = re.sub(r"^.+?/([^/]+$)", r"\1", hathi_sources[0])
+								self.hathi_source_cache[source] = re.sub(r"^pt\?id=", "", self.hathi_source_cache[source])
 
 					except:
 						self.view.window().status_message("Couldn’t read source: {}".format(source))
 						return
 
 				if source in self.hathi_source_cache:
-					webbrowser.open_new_tab("https://babel.hathitrust.org/cgi/pt/search?q1=" + urllib.parse.quote("\"" + selection + "\"") + ";id=" + self.hathi_source_cache[source])
+					webbrowser.open_new_tab("https://babel.hathitrust.org/cgi/pt/search?id=" + self.hathi_source_cache[source] + "&q1=" + urllib.parse.quote("\"" + selection + "\""))
 
 				return
 
