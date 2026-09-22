@@ -4,6 +4,7 @@ import re
 import urllib.parse
 import urllib.request
 import webbrowser
+from xml.parsers import expat
 
 from lxml import etree
 
@@ -129,6 +130,165 @@ def is_se_command_visible(self, group, index):
 
 	# We get here if we right-clicked on a tab
 	return is_se_file(get_group_view(self.window, group, index))
+
+def cfi_step(number: int, attributes: dict) -> str:
+	"""Build a CFI step with an escaped XML ID assertion, when present."""
+
+	identifier = attributes.get("id", attributes.get("{http://www.w3.org/XML/1998/namespace}id", attributes.get("http://www.w3.org/XML/1998/namespace}id", "")))
+	assertion = "".join("^" + character if character in "^[](),;=" else character for character in identifier)
+	return "/{}{}".format(number, "[{}]".format(assertion) if identifier else "")
+
+class SeCopyEpubCfiCommand(sublime_plugin.TextCommand):
+	"""Copy an intra-publication EPUB CFI for the current cursor or selection."""
+
+	def get_package_path(self) -> str:
+		"""Find a package declaring the current file as an EPUB content document."""
+
+		filename = self.view.file_name()
+		if not filename:
+			return ""
+
+		filename = os.path.realpath(filename)
+		directory = os.path.dirname(filename)
+		while True:
+			try:
+				candidates = [os.path.join(directory, name) for name in os.listdir(directory) if name.lower().endswith(".opf")]
+				container_path = os.path.join(directory, "META-INF", "container.xml")
+				if os.path.isfile(container_path):
+					container = etree.parse(container_path, etree.XMLParser(resolve_entities=False, no_network=True))
+					for rootfile in container.findall("{urn:oasis:names:tc:opendocument:xmlns:container}rootfiles/{urn:oasis:names:tc:opendocument:xmlns:container}rootfile"):
+						candidates.append(os.path.join(directory, rootfile.get("full-path", "")))
+			except (OSError, etree.XMLSyntaxError):
+				candidates = []
+
+			for candidate in candidates:
+				try:
+					package = etree.parse(candidate, etree.XMLParser(resolve_entities=False, no_network=True))
+					for item in package.findall("{http://www.idpf.org/2007/opf}manifest/{http://www.idpf.org/2007/opf}item"):
+						if item.get("media-type") not in ("application/xhtml+xml", "image/svg+xml"):
+							continue
+						href = urllib.parse.urlsplit(item.get("href", ""))
+						if not href.scheme and not href.netloc and os.path.realpath(os.path.join(os.path.dirname(candidate), urllib.parse.unquote(href.path))) == filename:
+							return candidate
+				except (OSError, ValueError, etree.XMLSyntaxError):
+					continue
+
+			parent = os.path.dirname(directory)
+			if parent == directory:
+				return ""
+			directory = parent
+
+	def run(self, edit: sublime.Edit) -> None:
+		"""Resolve the editor selection through the package spine and copy its CFI."""
+
+		if not self.is_enabled():
+			return
+
+		try:
+			filename = self.view.file_name()
+			metadata_path = self.get_package_path()
+			package = etree.parse(metadata_path, etree.XMLParser(resolve_entities=False, no_network=True)).getroot()
+			namespaces = {"opf": "http://www.idpf.org/2007/opf"}
+			manifest_id = None
+			for item in package.findall("opf:manifest/opf:item", namespaces):
+				href = urllib.parse.urlsplit(item.get("href", ""))
+				if not href.scheme and not href.netloc and os.path.realpath(os.path.join(os.path.dirname(metadata_path), urllib.parse.unquote(href.path))) == os.path.realpath(filename):
+					manifest_id = item.get("id")
+					break
+
+			package_steps = []
+			for number, child in enumerate(element for element in package if isinstance(element.tag, str)):
+				if child.tag == "{http://www.idpf.org/2007/opf}spine":
+					for index, itemref in enumerate(element for element in child if isinstance(element.tag, str)):
+						if manifest_id and itemref.tag == "{http://www.idpf.org/2007/opf}itemref" and itemref.get("idref") == manifest_id:
+							package_steps = [cfi_step(2 * (number + 1), dict(child.attrib)), cfi_step(2 * (index + 1), dict(itemref.attrib))]
+							break
+					break
+			if not package_steps:
+				raise ValueError("This content document is not in the ebook spine.")
+
+			# Track element paths and UTF-16 text offsets while parsing up to each selection boundary.
+			parser = expat.ParserCreate(namespace_separator="}")
+			paths = []
+			child_counts = []
+			text_offsets = []
+			location = ["/1", ":0"]
+
+			def start_element(name: str, attributes: dict) -> None:
+				"""Enter an element, counting only element siblings for CFI steps."""
+				if child_counts:
+					child_counts[-1] += 1
+					paths.append(cfi_step(child_counts[-1] * 2, attributes))
+				child_counts.append(0)
+				text_offsets.append(0)
+				location[:] = paths + ["/1", ":0"]
+
+			def end_element(name: str) -> None:
+				"""Return to the following text chunk in the parent element."""
+				child_counts.pop()
+				text_offsets.pop()
+				if paths:
+					paths.pop()
+				if child_counts:
+					text_offsets[-1] = 0
+					location[:] = paths + ["/{}".format(child_counts[-1] * 2 + 1), ":0"]
+
+			def character_data(value: str) -> None:
+				"""Count expanded text, preserving whitespace and ignoring comments."""
+				if text_offsets:
+					text_offsets[-1] += len(value.encode("utf-16-le")) // 2
+					location[:] = paths + ["/{}".format(child_counts[-1] * 2 + 1), ":{}".format(text_offsets[-1])]
+
+			parser.StartElementHandler = start_element
+			parser.EndElementHandler = end_element
+			parser.CharacterDataHandler = character_data
+			# Do not resolve external entities or accept declared entities with unmappable source positions.
+			def entity_declared(name: str, parameter: int, value: str, base: str, system_id: str, public_id: str, notation: str) -> None:
+				"""Reject custom entities instead of generating misleading source offsets."""
+
+				raise ValueError("Custom XML entities are not supported.")
+
+			parser.EntityDeclHandler = entity_declared
+			source = self.view.substr(sublime.Region(0, self.view.size()))
+			selection = self.view.sel()[0]
+
+			# Substrings use Sublime's own coordinates, including for non-BMP characters.
+			start = len(self.view.substr(sublime.Region(0, selection.begin())))
+			end = len(self.view.substr(sublime.Region(0, selection.end())))
+			parser.Parse(source[:start], False)
+			start_path = location[:]
+			parser.Parse(source[start:end], False)
+			end_path = location[:]
+			parser.Parse(source[end:], True)
+			prefix = "".join(package_steps) + "!"
+			if selection.empty():
+				cfi = prefix + "".join(start_path)
+			else:
+				common = 0
+				while common < min(len(start_path), len(end_path)) - 1 and start_path[common] == end_path[common]:
+					common += 1
+
+				# Keep indirection with the local paths when the document root is their only common ancestor.
+				if common:
+					cfi = "{},{},{}".format(prefix + "".join(start_path[:common]), "".join(start_path[common:]), "".join(end_path[common:]))
+				else:
+					cfi = "{},{},{}".format("".join(package_steps), "!" + "".join(start_path), "!" + "".join(end_path))
+			relative_path = os.path.relpath(metadata_path, os.path.dirname(filename)).replace(os.sep, "/")
+			url = "{}#epubcfi({})".format(urllib.parse.quote(relative_path, safe="/"), urllib.parse.quote(cfi, safe="/!:,;=[]()^"))
+			sublime.set_clipboard(url)
+			sublime.status_message("Copied EPUB CFI.")
+		except (OSError, ValueError, IndexError, TypeError, etree.XMLSyntaxError, expat.ExpatError) as exception:
+			sublime.status_message("Couldn’t copy EPUB CFI: {}".format(exception))
+
+	def is_visible(self) -> bool:
+		"""Show the command for EPUB content documents and other SE files."""
+
+		return is_se_file(self.view) or self.is_enabled()
+
+	def is_enabled(self) -> bool:
+		"""Enable the command for any content document declared in an EPUB package."""
+
+		return bool(self.get_package_path())
 
 class SeOpenMetadataFileCommand(sublime_plugin.WindowCommand):
 	"""Contains the se_open_metadata_file command"""

@@ -33,6 +33,10 @@
 		]
 	},
 	{
+		"caption": "SE: Copy EPUB CFI",
+		"command": "se_copy_epub_cfi"
+	},
+	{
 		"caption": "SE: Search Page Scans for Selection",
 		"command": "se_search_source"
 	},
@@ -44,4 +48,3 @@
 		"caption": "-"
 	}
 ]
-
