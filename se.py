@@ -319,6 +319,8 @@ class SeSearchSourceCommand(sublime_plugin.TextCommand):
 						if hathi_sources:
 							if "hdl.handle.net" in hathi_sources[0]:
 								self.hathi_source_cache[source] = re.sub(r"^https?://hdl\.handle\.net/[0-9]+/", r"", hathi_sources[0])
+							elif re.match(r"\bid=", hathi_sources[0]):
+								self.hathi_source_cache[source] = re.sub(r"^.+\bid=", r"", hathi_sources[0])
 							else:
 								self.hathi_source_cache[source] = re.sub(r"^.+?/([^/]+$)", r"\1", hathi_sources[0])
 								self.hathi_source_cache[source] = re.sub(r"^pt\?id=", "", self.hathi_source_cache[source])
