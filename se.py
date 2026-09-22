@@ -5,6 +5,7 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from xml.parsers import expat
+from xml.sax.saxutils import escape
 
 from lxml import etree
 
@@ -274,8 +275,9 @@ class SeCopyEpubCfiCommand(sublime_plugin.TextCommand):
 				else:
 					cfi = "{},{},{}".format("".join(package_steps), "!" + "".join(start_path), "!" + "".join(end_path))
 			relative_path = os.path.relpath(metadata_path, os.path.dirname(filename)).replace(os.sep, "/")
-			url = "{}#epubcfi({})".format(urllib.parse.quote(relative_path, safe="/"), urllib.parse.quote(cfi, safe="/!:,;=[]()^"))
-			sublime.set_clipboard(url)
+			url = "{}#epubcfi({})".format(urllib.parse.quote(relative_path, safe="/"), urllib.parse.quote(cfi, safe="/?:@!$&'()*+,;="))
+			# Escape the URL for use in a double-quoted XML attribute.
+			sublime.set_clipboard(escape(url, {'"': "&quot;"}))
 			sublime.status_message("Copied EPUB CFI.")
 		except (OSError, ValueError, IndexError, TypeError, etree.XMLSyntaxError, expat.ExpatError) as exception:
 			sublime.status_message("Couldn’t copy EPUB CFI: {}".format(exception))
